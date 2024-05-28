@@ -40,7 +40,7 @@ def CurVSCodeExtensions() -> list[str]:
 	output: str = subprocess.check_output("code --list-extensions --show-versions", shell=True, text=True)
 	return output.splitlines()
 
-def ParseExtensionString(ext_str: str) -> (str, str, str):
+def ParseExtensionString(ext_str: str) -> tuple[str, str, str]:
 	uid, version = ext_str.split("@")
 	publisher, package = uid.split(".")
 	return publisher, package, version
