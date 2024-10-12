@@ -160,7 +160,7 @@ def Clone(dir: str) -> bool:
 
 		manifest["extensions"][ext_str] = {p : "" for p in PLATFORM_IDS["extension_id"].keys()} | {"Generic" : ""}
 
-		# Try to get all of the platform specifc variants first.
+		# Try to get all of the platform specific variants first.
 		for platform in PLATFORM_IDS["extension_id"].keys():
 			id = PLATFORM_IDS["extension_id"][platform]
 			url = ExtensionURL(publisher, package, version, id, backup_api=True)
