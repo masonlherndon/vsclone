@@ -11,6 +11,7 @@ import json
 import re
 import uuid
 
+
 PLATFORM_IDS: dict = {
 	"installer_id": {
 		"Linux": "linux-deb-x64",
@@ -26,28 +27,35 @@ PLATFORM_IDS: dict = {
 	},
 }
 
+
 def CurVSCodeVersion() -> str:
 	output: str = subprocess.check_output("code --version", shell=True, text=True)
 	return output.splitlines()[0]
+
 
 def CurVSCodeCommitID() -> str:
 	output: str = subprocess.check_output("code --version", shell=True, text=True)
 	return output.splitlines()[1]
 
+
 def CurVSCodeExtensions() -> list[str]:
 	output: str = subprocess.check_output("code --list-extensions --show-versions", shell=True, text=True)
 	return output.splitlines()
+
 
 def ParseExtensionString(ext_str: str) -> tuple[str, str, str]:
 	uid, version = ext_str.split("@")
 	publisher, package = uid.split(".")
 	return publisher, package, version
 
+
 def InstallerURL(version: str, platform_id: str) -> str:
 	return f"https://update.code.visualstudio.com/{version}/{platform_id}/stable"
 
+
 def ServerURL(commit_id: str, platform_id: str) -> str:
 	return f"https://update.code.visualstudio.com/commit:{commit_id}/server-{platform_id}/stable"
+
 
 def ExtensionURL(publisher: str, package: str, version: str, platform_id: str | None = None, backup_api: bool = False) -> str:
 	query_params = f"?targetPlatform={platform_id}" if platform_id else ""
@@ -55,6 +63,7 @@ def ExtensionURL(publisher: str, package: str, version: str, platform_id: str | 
 		return f"https://marketplace.visualstudio.com/_apis/public/gallery/publishers/{publisher}/vsextensions/{package}/{version}/vspackage{query_params}"
 	else:
 		return f"https://{publisher}.gallery.vsassets.io/_apis/public/gallery/publisher/{publisher}/extension/{package}/{version}/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage{query_params}"
+
 
 def ExtensionFilename(publisher: str, package: str, version: str, platform_id: str | None = None) -> str:
 	if not platform_id:
@@ -74,6 +83,7 @@ def GetFilenameFromHeaders(headers: dict) -> str:
 		return ""
 
 	return match.group(1).strip("\'\"")
+
 
 def Download(url: str, path: str = "") -> str:
 
@@ -106,6 +116,7 @@ def Download(url: str, path: str = "") -> str:
 	progress_bar.close()
 
 	return final_path
+
 
 def Clone(dir: str) -> bool:
 
@@ -175,6 +186,7 @@ def Clone(dir: str) -> bool:
 
 	return True
 
+
 def ExecuteCommandArgv(cmd: list[str]) -> int:
 	print(" ".join(cmd), flush=True)
 	with subprocess.Popen(cmd, stdout=subprocess.PIPE) as p:
@@ -183,8 +195,10 @@ def ExecuteCommandArgv(cmd: list[str]) -> int:
 			print(text, end="", flush=True)
 		return p.returncode
 
+
 def ExecuteCommandStr(cmd: str) -> int:
 	return ExecuteCommandArgv(cmd.split())
+
 
 def Install(dir: str) -> bool:
 
@@ -248,6 +262,7 @@ def Install(dir: str) -> bool:
 
 	return True
 
+
 def main() -> int:
 
 	description = f"""\
@@ -298,6 +313,7 @@ def main() -> int:
 		return -1
 
 	return 0
+
 
 if __name__ == "__main__":
 	exit(main())
