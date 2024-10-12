@@ -6,8 +6,6 @@ import subprocess
 import getpass
 import shutil
 import tempfile
-import requests
-from tqdm import tqdm
 import argparse
 import json
 import re
@@ -64,28 +62,37 @@ def ExtensionFilename(publisher: str, package: str, version: str, platform_id: s
 	else:
 		return f"{publisher}.{package}-{version}@{platform_id}.vsix"
 
-def GetResponseFilename(response: requests.Response) -> str | None:
 
-	disposition: str = response.headers.get("content-disposition", default="")
+def GetFilenameFromHeaders(headers: dict) -> str:
+
+	disposition: str = headers.get("content-disposition", default="")
 	if not disposition:
-		return None
+		return ""
 
 	match = re.search(r"filename=([^;]+)", disposition)
 	if not match:
-		return None
+		return ""
 
 	return match.group(1).strip("\'\"")
 
 def Download(url: str, path: str = "") -> str:
+
+	# These modules are only used during the "clone" step and aren't always in
+	# the stdlib. Import them here so that the "install" step is
+	# actually offline-friendly.
+	import requests         # For the download itself.
+	from tqdm import tqdm   # For the progress bar during the download.
 
 	# Ask for file and return early if not found.
 	response = requests.get(url, stream=True)
 	if not response.ok:
 		return ""
 
+	header_name: str = GetFilenameFromHeaders(response.headers)
+
 	# Figure out naming weirdness.
-	display_name = os.path.basename(path) or GetResponseFilename(response) or url
-	final_path = path or GetResponseFilename(response) or uuid.uuid4().hex
+	display_name = os.path.basename(path) or header_name or url
+	final_path = path or header_name or uuid.uuid4().hex
 
 	file_size = int(response.headers.get("content-length", 0))
 
