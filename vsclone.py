@@ -11,18 +11,23 @@ import re
 import uuid
 
 
+# The ID keys correspond to the return value of GetOSArchString()
+# on each of our currently supported OS/Arch combos.
 PLATFORM_IDS: dict[str, dict[str, str]] = {
 	"installer_id": {
-		"Linux": "linux-deb-x64",
-		"Windows": "win32-x64-user",
+		"Linux-x86_64": "linux-deb-x64",
+		"Linux-aarch64": "linux-deb-arm64",
+		"Windows-AMD64": "win32-x64-user",
 	},
 	"server_id": {
-		"Linux": "linux-x64",
-		"Windows": "win32-x64",
+		"Linux-x86_64": "linux-x64",
+		"Linux-aarch64": "linux-arm64",
+		"Windows-AMD64": "win32-x64",
 	},
 	"extension_id": {
-		"Linux": "linux-x64",
-		"Windows": "win32-x64",
+		"Linux-x86_64": "linux-x64",
+		"Linux-aarch64": "linux-arm64",
+		"Windows-AMD64": "win32-x64",
 	},
 }
 
@@ -178,6 +183,10 @@ def Clone(dir: str) -> bool:
 	return True
 
 
+def GetOSArchString() -> str:
+	return f"{platform.system()}-{platform.machine()}"
+
+
 def ExecuteCommandArgv(cmd: list[str]) -> int:
 	print(" ".join(cmd), flush=True)
 	with subprocess.Popen(cmd, stdout=subprocess.PIPE) as p:
@@ -200,7 +209,7 @@ def Install(dir: str) -> bool:
 		manifest: dict = json.loads(f.read())
 
 	# Install new VSCode.
-	installer = os.path.abspath(manifest["installer"][platform.system()])
+	installer = os.path.abspath(manifest["installer"][GetOSArchString()])
 	if platform.system() == "Linux":
 		if ExecuteCommandStr(f"sudo apt-get install -y {installer}") != 0: return False
 	elif platform.system() == "Windows":
@@ -212,7 +221,7 @@ def Install(dir: str) -> bool:
 	# Collect extensions to be installed.
 	to_install = []
 	for ext_str in manifest["extensions"].keys():
-		platform_vsix = manifest["extensions"][ext_str][platform.system()]
+		platform_vsix = manifest["extensions"][ext_str][GetOSArchString()]
 		generic_vsix = manifest["extensions"][ext_str]["Generic"]
 		if platform_vsix:
 			to_install.append(platform_vsix)
@@ -245,7 +254,7 @@ def Install(dir: str) -> bool:
 	if ExecuteCommandArgv(cmd) != 0: return False
 
 	# Extract/install the server and copy over local extensions
-	archive = manifest["server"][platform.system()]
+	archive = manifest["server"][GetOSArchString()]
 	with tempfile.TemporaryDirectory() as temp_dir:
 		shutil.unpack_archive(archive, temp_dir)
 		archive_payload = os.path.join(temp_dir, archive.split(".")[0])
