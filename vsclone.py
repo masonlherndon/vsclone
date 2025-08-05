@@ -1,4 +1,3 @@
-
 import os
 import sys
 import platform
@@ -12,7 +11,7 @@ import re
 import uuid
 
 
-PLATFORM_IDS: dict = {
+PLATFORM_IDS: dict[str, dict[str, str]] = {
 	"installer_id": {
 		"Linux": "linux-deb-x64",
 		"Windows": "win32-x64-user",
@@ -72,19 +71,6 @@ def ExtensionFilename(publisher: str, package: str, version: str, platform_id: s
 		return f"{publisher}.{package}-{version}@{platform_id}.vsix"
 
 
-def GetFilenameFromHeaders(headers: dict) -> str:
-
-	disposition: str = headers.get("content-disposition", default="")
-	if not disposition:
-		return ""
-
-	match = re.search(r"filename=([^;]+)", disposition)
-	if not match:
-		return ""
-
-	return match.group(1).strip("\'\"")
-
-
 def Download(url: str, path: str = "") -> str:
 
 	# These modules are only used during the "clone" step and aren't always in
@@ -98,7 +84,12 @@ def Download(url: str, path: str = "") -> str:
 	if not response.ok:
 		return ""
 
-	header_name: str = GetFilenameFromHeaders(response.headers)
+	header_name: str = ""
+	disposition: str = response.headers.get("content-disposition", default="")
+	if disposition:
+		match = re.search(r"filename=([^;]+)", disposition)
+		if match:
+			header_name = match.group(1).strip("\'\"")
 
 	# Figure out naming weirdness.
 	display_name = os.path.basename(path) or header_name or url
@@ -191,8 +182,9 @@ def ExecuteCommandArgv(cmd: list[str]) -> int:
 	print(" ".join(cmd), flush=True)
 	with subprocess.Popen(cmd, stdout=subprocess.PIPE) as p:
 		while p.poll() is None:
-			text = os.read(p.stdout.fileno(), 1024).decode("utf-8")
-			print(text, end="", flush=True)
+			if p.stdout is not None:
+				text = os.read(p.stdout.fileno(), 1024).decode("utf-8")
+				print(text, end="", flush=True)
 		return p.returncode
 
 
@@ -308,13 +300,15 @@ def main() -> int:
 			return -1
 		success = Install(args.input_dir)
 
+	else:
+		assert False
+
 	if not success:
-		print("Error: Something went wrong. Installation failed.")
+		print("Error: Something went wrong.")
 		return -1
 
 	return 0
 
 
 if __name__ == "__main__":
-	exit(main())
-
+	sys.exit(main())
