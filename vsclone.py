@@ -11,6 +11,10 @@ import re
 import uuid
 
 
+# Workaround. They changed the structure of the server installation folder.
+MODERN_SERVER_LAYOUT: bool = True
+
+
 # The ID keys correspond to the return value of GetOSArchString()
 # on each of our currently supported OS/Arch combos.
 PLATFORM_IDS: dict[str, dict[str, str]] = {
@@ -22,6 +26,11 @@ PLATFORM_IDS: dict[str, dict[str, str]] = {
 	"server_id": {
 		"Linux-x86_64": "linux-x64",
 		"Linux-aarch64": "linux-arm64",
+		"Windows-AMD64": "win32-x64",
+	},
+	"cli_id": {
+		"Linux-x86_64": "alpine-x64",
+		"Linux-aarch64": "alpine-arm64",
 		"Windows-AMD64": "win32-x64",
 	},
 	"extension_id": {
@@ -59,6 +68,10 @@ def InstallerURL(version: str, platform_id: str) -> str:
 
 def ServerURL(commit_id: str, platform_id: str) -> str:
 	return f"https://update.code.visualstudio.com/commit:{commit_id}/server-{platform_id}/stable"
+
+
+def CliURL(commit_id: str, platform_id: str) -> str:
+	return f"https://update.code.visualstudio.com/commit:{commit_id}/cli-{platform_id}/stable"
 
 
 def ExtensionURL(publisher: str, package: str, version: str, platform_id: str | None = None, backup_api: bool = False) -> str:
@@ -123,6 +136,7 @@ def Clone(dir: str) -> bool:
 		"commit_id" : CurVSCodeCommitID(),
 		"installer" : {p : "" for p in PLATFORM_IDS["installer_id"].keys()},
 		"server" : {p : "" for p in PLATFORM_IDS["server_id"].keys()},
+		"cli" : {p : "" for p in PLATFORM_IDS["cli_id"].keys()},
 		"extensions" : {},
 	}
 
@@ -146,6 +160,17 @@ def Clone(dir: str) -> bool:
 			manifest["server"][platform] = path
 		else:
 			print(f"Error: Failed to get server for {id}")
+			return False
+
+	# Get every variant of the cli thing which the server now needs.
+	for platform in PLATFORM_IDS["cli_id"].keys():
+		id = PLATFORM_IDS["cli_id"][platform]
+		url = CliURL(CurVSCodeCommitID(), id)
+		path = Download(url)    # supplies its own name
+		if path:
+			manifest["cli"][platform] = path
+		else:
+			print(f"Error: Failed to get cli for {id}")
 			return False
 
 	# Get every variant of every installed extension.
@@ -235,7 +260,15 @@ def Install(dir: str) -> bool:
 	local_extensions_dir = os.path.join(local_dir, "extensions")
 	server_dir = os.path.expanduser("~/.vscode-server")
 	server_extensions_dir = os.path.join(server_dir, "extensions")
-	server_core_dir = os.path.join(server_dir, "bin", manifest["commit_id"])
+
+	commit_id: str = manifest["commit_id"]
+	server_core_dir: str = ""
+	if MODERN_SERVER_LAYOUT:
+		# ~/.vscode-server/cli/servers/Stable-${COMMIT_ID}/server/
+		server_core_dir = os.path.join(server_dir, "cli", "servers", f"Stable-{commit_id}", "server")
+	else:
+		# ~/.vscode-server/bin/${COMMIT_ID}
+		server_core_dir = os.path.join(server_dir, "bin", commit_id)
 
 	# Wipe old extension and server artifacts.
 	shutil.rmtree(local_extensions_dir, ignore_errors=True)
@@ -253,13 +286,21 @@ def Install(dir: str) -> bool:
 		cmd = ["code"] + extension_args
 	if ExecuteCommandArgv(cmd) != 0: return False
 
-	# Extract/install the server and copy over local extensions
-	archive = manifest["server"][GetOSArchString()]
+	# Extract/install the server and copy over local extensions.
+	server_archive: str = manifest["server"][GetOSArchString()]
 	with tempfile.TemporaryDirectory() as temp_dir:
-		shutil.unpack_archive(archive, temp_dir)
-		archive_payload = os.path.join(temp_dir, archive.split(".")[0])
+		shutil.unpack_archive(server_archive, temp_dir)
+		archive_payload = os.path.join(temp_dir, server_archive.split(".")[0])
 		shutil.copytree(archive_payload, server_core_dir, dirs_exist_ok=True)
 	shutil.copytree(local_extensions_dir, server_extensions_dir, dirs_exist_ok=True)
+
+	# Extract/install the cli.
+	cli_archive: str = manifest["cli"][GetOSArchString()]
+	with tempfile.TemporaryDirectory() as temp_dir:
+		shutil.unpack_archive(cli_archive, temp_dir)
+		cli = os.path.join(temp_dir, "code")
+		new_loc = os.path.join(server_dir, f"code-{commit_id}")
+		shutil.move(cli, new_loc)
 
 	return True
 
