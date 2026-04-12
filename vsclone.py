@@ -214,12 +214,8 @@ def GetOSArchString() -> str:
 
 def ExecuteCommandArgv(cmd: list[str]) -> int:
 	print(" ".join(cmd), flush=True)
-	with subprocess.Popen(cmd, stdout=subprocess.PIPE) as p:
-		while p.poll() is None:
-			if p.stdout is not None:
-				text = os.read(p.stdout.fileno(), 1024).decode("utf-8")
-				print(text, end="", flush=True)
-		return p.returncode
+	result = subprocess.run(cmd)
+	return result.returncode
 
 
 def ExecuteCommandStr(cmd: str) -> int:
