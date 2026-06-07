@@ -277,7 +277,7 @@ def Install(dir: str) -> bool:
 		extension_args.append(vsix)
 	if platform.system() == "Windows":
 		code_path = f"\"C:\\Users\\{getpass.getuser()}\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code\""
-		cmd = ["powershell", "Start-Process", "-verb", "runas", code_path, "\"" + " ".join(extension_args) + "\""]
+		cmd = ["powershell", "Start-Process", "-Verb", "RunAs", code_path, "\"" + " ".join(extension_args) + "\""]
 	else:
 		cmd = ["code"] + extension_args
 	if ExecuteCommandArgv(cmd) != 0: return False
