@@ -294,7 +294,8 @@ def Install(dir: str) -> bool:
 	cli_archive: str = manifest["cli"][GetOSArchString()]
 	with tempfile.TemporaryDirectory() as temp_dir:
 		shutil.unpack_archive(cli_archive, temp_dir)
-		cli = os.path.join(temp_dir, "code")
+		cli_name: str = "code.exe" if platform.system() == "Windows" else "code"
+		cli = os.path.join(temp_dir, cli_name)
 		new_loc = os.path.join(server_dir, f"code-{commit_id}")
 		shutil.move(cli, new_loc)
 
