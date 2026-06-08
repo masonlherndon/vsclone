@@ -256,6 +256,7 @@ def Install(dir: str) -> bool:
 	local_extensions_dir = os.path.join(local_dir, "extensions")
 	server_dir = os.path.expanduser("~/.vscode-server")
 	server_extensions_dir = os.path.join(server_dir, "extensions")
+	shared_dir = os.path.expanduser("~/.vscode-shared")
 
 	commit_id: str = manifest["commit_id"]
 	server_core_dir: str = ""
@@ -269,6 +270,7 @@ def Install(dir: str) -> bool:
 	# Wipe old extension and server artifacts.
 	shutil.rmtree(local_extensions_dir, ignore_errors=True)
 	shutil.rmtree(server_dir, ignore_errors=True)
+	shutil.rmtree(shared_dir, ignore_errors=True)
 
 	# Install the new extensions.
 	extension_args = []
